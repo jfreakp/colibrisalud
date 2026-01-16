@@ -2,16 +2,12 @@
   "version": 2,
   "builds": [
     {
-      "src": "colibrisalud/wsgi.py",
+      "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "15mb",
         "runtime": "python3.11"
       }
-    },
-    {
-      "src": "static/**",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -21,10 +17,11 @@
     },
     {
       "src": "/(.*)",
-      "dest": "colibrisalud/wsgi.py"
+      "dest": "/api/index.py"
     }
   ],
   "env": {
-    "DEBUG": "False"
+    "DEBUG": "False",
+    "PYTHONUNBUFFERED": "1"
   }
 }
