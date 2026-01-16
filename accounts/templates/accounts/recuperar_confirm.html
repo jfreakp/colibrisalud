@@ -1,0 +1,36 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Recuperar contraseña - Colibri Salud{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Cambiar contraseña</h2>
+    <p style="text-align: center; color: #666; margin-bottom: 20px;">
+        Ingresa tu nueva contraseña.
+    </p>
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.new_password1.id_for_label }}">Nueva contraseña:</label>
+            {{ form.new_password1 }}
+            {% if form.new_password1.help_text %}
+                <div class="helptext">{{ form.new_password1.help_text|safe }}</div>
+            {% endif %}
+            {% if form.new_password1.errors %}
+                <div style="color: red; font-size: 12px;">{{ form.new_password1.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="{{ form.new_password2.id_for_label }}">Confirmar contraseña:</label>
+            {{ form.new_password2 }}
+            {% if form.new_password2.errors %}
+                <div style="color: red; font-size: 12px;">{{ form.new_password2.errors }}</div>
+            {% endif %}
+        </div>
+
+        <button type="submit">Cambiar contraseña</button>
+    </form>
+</div>
+{% endblock %}

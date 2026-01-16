@@ -1,0 +1,16 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Contraseña recuperada - Colibri Salud{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>✅ Contraseña actualizada</h2>
+    <p style="text-align: center; color: #155724; margin-bottom: 30px;">
+        Tu contraseña ha sido cambiada correctamente. Ahora puedes iniciar sesión con tu nueva contraseña.
+    </p>
+    
+    <div class="link-container">
+        <a href="{% url 'login' %}"><button style="width: auto; padding: 10px 20px;">Ir a iniciar sesión</button></a>
+    </div>
+</div>
+{% endblock %}
