@@ -11,7 +11,7 @@ from .forms import RegistroForm, LoginForm, RecuperarForm
 @require_http_methods(["GET", "POST"])
 def registro(request):
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('dashboard')
     
     if request.method == 'POST':
         form = RegistroForm(request.POST)
@@ -28,24 +28,27 @@ def registro(request):
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('dashboard')
     
     if request.method == 'POST':
-        email = request.POST.get('email')
+        identifier = request.POST.get('identifier')
         password = request.POST.get('password')
-        
-        try:
-            user = User.objects.get(email=email)
-            user = authenticate(request, username=user.username, password=password)
-            
-            if user is not None:
-                login(request, user)
-                messages.success(request, f'¡Bienvenido {user.first_name or user.email}!')
-                return redirect('home')
-            else:
-                messages.error(request, 'Contraseña incorrecta.')
-        except User.DoesNotExist:
-            messages.error(request, 'El correo no está registrado.')
+
+        user = authenticate(request, username=identifier, password=password)
+
+        if user is None:
+            try:
+                user_obj = User.objects.get(email=identifier)
+                user = authenticate(request, username=user_obj.username, password=password)
+            except User.DoesNotExist:
+                user = None
+
+        if user is not None:
+            login(request, user)
+            messages.success(request, f'¡Bienvenido {user.first_name or user.username or user.email}!')
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Credenciales inválidas. Revisa tu correo/usuario y contraseña.')
     
     return render(request, 'accounts/login.html')
 
@@ -54,7 +57,7 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     messages.success(request, 'Sesión cerrada correctamente.')
-    return redirect('home')
+    return redirect('login')
 
 
 class RecuperarContraseña(PasswordResetView):
