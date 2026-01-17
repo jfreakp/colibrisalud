@@ -10,4 +10,9 @@ urlpatterns = [
     path('citas/', views.citas_lista, name='citas_lista'),
     path('citas/import/', views.citas_import, name='citas_import'),
     path('citas/descargar-plantilla/', views.descargar_plantilla_citas, name='descargar_plantilla_citas'),
+    path('numeros/', views.numeros_lista, name='numeros_lista'),
+    path('numeros/crear/', views.numero_crear, name='numero_crear'),
+    path('numeros/<int:pk>/editar/', views.numero_editar, name='numero_editar'),
+    path('numeros/<int:pk>/eliminar/', views.numero_eliminar, name='numero_eliminar'),
+    path('numeros/<int:pk>/toggle/', views.numero_toggle, name='numero_toggle'),
 ]

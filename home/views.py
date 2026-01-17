@@ -1,10 +1,10 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from .models import Paciente, Cita
+from .models import Paciente, Cita, NumeroNotificacion
 from datetime import datetime
 import io
 
@@ -372,4 +372,116 @@ def descargar_plantilla_citas(request):
     
     workbook.save(response)
     return response
+
+
+@login_required(login_url='login')
+def numeros_lista(request):
+    """Vista para listar números de notificación"""
+    numeros = NumeroNotificacion.objects.all()
+    
+    # Filtros
+    filtro_estado = request.GET.get('estado', '')
+    if filtro_estado:
+        numeros = numeros.filter(activo=filtro_estado == 'activo')
+    
+    busqueda = request.GET.get('q', '')
+    if busqueda:
+        numeros = numeros.filter(
+            numero__icontains=busqueda) | numeros.filter(
+            descripcion__icontains=busqueda
+        )
+    
+    contexto = {
+        'numeros': numeros,
+        'total': NumeroNotificacion.objects.count(),
+        'activos': NumeroNotificacion.objects.filter(activo=True).count(),
+        'inactivos': NumeroNotificacion.objects.filter(activo=False).count(),
+    }
+    
+    return render(request, 'home/numeros_lista.html', contexto)
+
+
+@login_required(login_url='login')
+def numero_crear(request):
+    """Vista para crear un número de notificación"""
+    if request.method == 'POST':
+        numero = request.POST.get('numero', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        
+        if not numero:
+            messages.error(request, 'El número es obligatorio')
+            return redirect('numero_crear')
+        
+        if NumeroNotificacion.objects.filter(numero=numero).exists():
+            messages.error(request, 'Este número ya existe')
+            return redirect('numero_crear')
+        
+        try:
+            NumeroNotificacion.objects.create(
+                numero=numero,
+                descripcion=descripcion,
+                activo=True
+            )
+            messages.success(request, f'Número {numero} creado correctamente')
+            return redirect('numeros_lista')
+        except Exception as e:
+            messages.error(request, f'Error al crear el número: {str(e)}')
+            return redirect('numero_crear')
+    
+    return render(request, 'home/numero_form.html', {'titulo': 'Crear Número'})
+
+
+@login_required(login_url='login')
+def numero_editar(request, pk):
+    """Vista para editar un número de notificación"""
+    numero = get_object_or_404(NumeroNotificacion, pk=pk)
+    
+    if request.method == 'POST':
+        numero.descripcion = request.POST.get('descripcion', '').strip()
+        numero.activo = request.POST.get('activo') == 'on'
+        
+        try:
+            numero.save()
+            messages.success(request, 'Número actualizado correctamente')
+            return redirect('numeros_lista')
+        except Exception as e:
+            messages.error(request, f'Error al actualizar el número: {str(e)}')
+            return redirect('numero_editar', pk=pk)
+    
+    contexto = {
+        'numero': numero,
+        'titulo': 'Editar Número'
+    }
+    return render(request, 'home/numero_form.html', contexto)
+
+
+@login_required(login_url='login')
+def numero_eliminar(request, pk):
+    """Vista para eliminar un número de notificación"""
+    numero = get_object_or_404(NumeroNotificacion, pk=pk)
+    
+    if request.method == 'POST':
+        numero_str = numero.numero
+        numero.delete()
+        messages.success(request, f'Número {numero_str} eliminado correctamente')
+        return redirect('numeros_lista')
+    
+    contexto = {'numero': numero}
+    return render(request, 'home/numero_eliminar.html', contexto)
+
+
+@login_required(login_url='login')
+def numero_toggle(request, pk):
+    """Toggle para activar/desactivar número"""
+    try:
+        numero = NumeroNotificacion.objects.get(pk=pk)
+        numero.activo = not numero.activo
+        numero.save()
+        
+        estado = "activado" if numero.activo else "desactivado"
+        messages.success(request, f'Número {estado} correctamente')
+    except NumeroNotificacion.DoesNotExist:
+        messages.error(request, 'Número no encontrado')
+    
+    return redirect('numeros_lista')
 

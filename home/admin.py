@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Paciente, Cita
+from .models import Paciente, Cita, NumeroNotificacion
 
 
 @admin.register(Paciente)
@@ -17,3 +17,11 @@ class CitaAdmin(admin.ModelAdmin):
     search_fields = ('paciente__nombre', 'paciente__apellido', 'paciente__movil')
     readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
     date_hierarchy = 'fecha'
+
+
+@admin.register(NumeroNotificacion)
+class NumeroNotificacionAdmin(admin.ModelAdmin):
+    list_display = ('numero', 'descripcion', 'activo', 'fecha_creacion')
+    list_filter = ('activo', 'fecha_creacion')
+    search_fields = ('numero', 'descripcion')
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')

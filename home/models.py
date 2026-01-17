@@ -40,3 +40,20 @@ class Cita(models.Model):
     
     def __str__(self):
         return f"Cita de {self.paciente} - {self.fecha} {self.hora}"
+
+
+class NumeroNotificacion(models.Model):
+    numero = models.CharField(max_length=20, unique=True)
+    descripcion = models.CharField(max_length=100, blank=True, help_text="Ej: WhatsApp principal, SMS emergencias, etc.")
+    activo = models.BooleanField(default=True)
+    
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-fecha_creacion']
+        verbose_name_plural = 'Números de Notificación'
+    
+    def __str__(self):
+        desc = f" - {self.descripcion}" if self.descripcion else ""
+        return f"{self.numero}{desc}"
