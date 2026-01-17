@@ -15,4 +15,9 @@ urlpatterns = [
     path('numeros/<int:pk>/editar/', views.numero_editar, name='numero_editar'),
     path('numeros/<int:pk>/eliminar/', views.numero_eliminar, name='numero_eliminar'),
     path('numeros/<int:pk>/toggle/', views.numero_toggle, name='numero_toggle'),
+    path('mensajes/', views.mensajes_lista, name='mensajes_lista'),
+    path('mensajes/crear/', views.mensaje_crear, name='mensaje_crear'),
+    path('mensajes/<int:pk>/editar/', views.mensaje_editar, name='mensaje_editar'),
+    path('mensajes/<int:pk>/eliminar/', views.mensaje_eliminar, name='mensaje_eliminar'),
+    path('mensajes/<int:pk>/toggle/', views.mensaje_toggle, name='mensaje_toggle'),
 ]

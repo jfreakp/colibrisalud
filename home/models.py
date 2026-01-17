@@ -57,3 +57,28 @@ class NumeroNotificacion(models.Model):
     def __str__(self):
         desc = f" - {self.descripcion}" if self.descripcion else ""
         return f"{self.numero}{desc}"
+
+
+class Mensaje(models.Model):
+    TIPO_CHOICES = [
+        ('confirmacion', 'Confirmación de cita'),
+        ('recordatorio', 'Recordatorio'),
+        ('cancelacion', 'Cancelación'),
+        ('cambio', 'Cambio de cita'),
+        ('otro', 'Otro'),
+    ]
+    
+    titulo = models.CharField(max_length=100)
+    contenido = models.TextField(help_text="Contenido del mensaje a enviar")
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='otro')
+    activo = models.BooleanField(default=True)
+    
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-fecha_creacion']
+        verbose_name_plural = 'Mensajes'
+    
+    def __str__(self):
+        return f"{self.titulo} ({self.get_tipo_display()})"

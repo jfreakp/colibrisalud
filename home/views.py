@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from .models import Paciente, Cita, NumeroNotificacion
+from .models import Paciente, Cita, NumeroNotificacion, Mensaje
 from datetime import datetime
 import io
 
@@ -131,8 +131,6 @@ def paciente_toggle(request, pk):
     
     return redirect('pacientes_lista')
 
-
-@login_required(login_url='login')
 def descargar_plantilla_excel(request):
     """Descargar plantilla Excel para importar pacientes"""
     # Crear workbook
@@ -484,4 +482,130 @@ def numero_toggle(request, pk):
         messages.error(request, 'Número no encontrado')
     
     return redirect('numeros_lista')
+
+
+@login_required(login_url='login')
+def mensajes_lista(request):
+    """Vista para listar mensajes"""
+    mensajes_obj = Mensaje.objects.all()
+    
+    # Filtros
+    filtro_tipo = request.GET.get('tipo', '')
+    if filtro_tipo:
+        mensajes_obj = mensajes_obj.filter(tipo=filtro_tipo)
+    
+    filtro_estado = request.GET.get('estado', '')
+    if filtro_estado:
+        mensajes_obj = mensajes_obj.filter(activo=filtro_estado == 'activo')
+    
+    busqueda = request.GET.get('q', '')
+    if busqueda:
+        mensajes_obj = mensajes_obj.filter(
+            titulo__icontains=busqueda) | mensajes_obj.filter(
+            contenido__icontains=busqueda
+        )
+    
+    contexto = {
+        'mensajes': mensajes_obj,
+        'total': Mensaje.objects.count(),
+        'activos': Mensaje.objects.filter(activo=True).count(),
+        'inactivos': Mensaje.objects.filter(activo=False).count(),
+        'tipos': Mensaje.TIPO_CHOICES,
+    }
+    
+    return render(request, 'home/mensajes_lista.html', contexto)
+
+
+@login_required(login_url='login')
+def mensaje_crear(request):
+    """Vista para crear un mensaje"""
+    if request.method == 'POST':
+        titulo = request.POST.get('titulo', '').strip()
+        contenido = request.POST.get('contenido', '').strip()
+        tipo = request.POST.get('tipo', 'otro').strip()
+        
+        if not titulo or not contenido:
+            messages.error(request, 'Título y contenido son obligatorios')
+            return redirect('mensaje_crear')
+        
+        try:
+            Mensaje.objects.create(
+                titulo=titulo,
+                contenido=contenido,
+                tipo=tipo,
+                activo=True
+            )
+            messages.success(request, f'Mensaje "{titulo}" creado correctamente')
+            return redirect('mensajes_lista')
+        except Exception as e:
+            messages.error(request, f'Error al crear el mensaje: {str(e)}')
+            return redirect('mensaje_crear')
+    
+    contexto = {
+        'titulo': 'Crear Mensaje',
+        'tipos': Mensaje.TIPO_CHOICES,
+    }
+    return render(request, 'home/mensaje_form.html', contexto)
+
+
+@login_required(login_url='login')
+def mensaje_editar(request, pk):
+    """Vista para editar un mensaje"""
+    mensaje = get_object_or_404(Mensaje, pk=pk)
+    
+    if request.method == 'POST':
+        mensaje.titulo = request.POST.get('titulo', '').strip()
+        mensaje.contenido = request.POST.get('contenido', '').strip()
+        mensaje.tipo = request.POST.get('tipo', 'otro').strip()
+        mensaje.activo = request.POST.get('activo') == 'on'
+        
+        if not mensaje.titulo or not mensaje.contenido:
+            messages.error(request, 'Título y contenido son obligatorios')
+            return redirect('mensaje_editar', pk=pk)
+        
+        try:
+            mensaje.save()
+            messages.success(request, 'Mensaje actualizado correctamente')
+            return redirect('mensajes_lista')
+        except Exception as e:
+            messages.error(request, f'Error al actualizar el mensaje: {str(e)}')
+            return redirect('mensaje_editar', pk=pk)
+    
+    contexto = {
+        'mensaje': mensaje,
+        'titulo': 'Editar Mensaje',
+        'tipos': Mensaje.TIPO_CHOICES,
+    }
+    return render(request, 'home/mensaje_form.html', contexto)
+
+
+@login_required(login_url='login')
+def mensaje_eliminar(request, pk):
+    """Vista para eliminar un mensaje"""
+    mensaje = get_object_or_404(Mensaje, pk=pk)
+    
+    if request.method == 'POST':
+        titulo = mensaje.titulo
+        mensaje.delete()
+        messages.success(request, f'Mensaje "{titulo}" eliminado correctamente')
+        return redirect('mensajes_lista')
+    
+    contexto = {'mensaje': mensaje}
+    return render(request, 'home/mensaje_eliminar.html', contexto)
+
+
+@login_required(login_url='login')
+def mensaje_toggle(request, pk):
+    """Toggle para activar/desactivar mensaje"""
+    try:
+        mensaje = Mensaje.objects.get(pk=pk)
+        mensaje.activo = not mensaje.activo
+        mensaje.save()
+        
+        estado = "activado" if mensaje.activo else "desactivado"
+        messages.success(request, f'Mensaje {estado} correctamente')
+    except Mensaje.DoesNotExist:
+        messages.error(request, 'Mensaje no encontrado')
+    
+    return redirect('mensajes_lista')
 
