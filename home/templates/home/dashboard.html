@@ -22,9 +22,13 @@
                 <span class="material-symbols-outlined">phone</span>
                 Números
             </a>
-            <a href="{% url 'mensajes_lista' %}" class="bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0">
+            <a href="{% url 'mensajes_lista' %}" class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-sm transition-all active:scale-95 shrink-0">
                 <span class="material-symbols-outlined">message</span>
                 Mensajes
+            </a>
+            <a href="{% url 'notificaciones_lista' %}" class="bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0">
+                <span class="material-symbols-outlined">mail</span>
+                Notificaciones
             </a>
         </div>
     </div>

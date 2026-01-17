@@ -1,0 +1,154 @@
+{% extends 'home/base_admin.html' %}
+
+{% block content %}
+<div class="flex flex-col gap-8 max-w-4xl">
+    <!-- Page Heading -->
+    <div class="flex flex-col gap-2">
+        <h1 class="text-[#111817] dark:text-white text-4xl font-black leading-tight tracking-tight">{{ titulo }}</h1>
+        <p class="text-gray-500 dark:text-gray-400 text-base">
+            {% if notificacion %}Modifica los datos de la notificación{% else %}Programa una nueva notificación{% endif %}
+        </p>
+    </div>
+
+    <!-- Mensajes de error -->
+    {% if messages %}
+    <div class="space-y-2">
+        {% for message in messages %}
+            {% if message.tags == 'error' %}
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex gap-3">
+                <span class="material-symbols-outlined text-red-600 dark:text-red-400 flex-shrink-0">error</span>
+                <p class="text-sm text-red-700 dark:text-red-300">{{ message }}</p>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Form -->
+    <form method="POST" class="bg-white dark:bg-background-dark rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
+        {% csrf_token %}
+
+        <!-- Sección: Cita -->
+        <div class="space-y-4 pb-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase">Información de Cita</h3>
+            
+            <div class="flex flex-col gap-2">
+                <label for="cita" class="text-sm font-bold text-gray-900 dark:text-white">Cita <span class="text-red-500">*</span></label>
+                <select id="cita" name="cita" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" required>
+                    <option value="">Selecciona una cita</option>
+                    {% for cita in citas %}
+                    <option value="{{ cita.pk }}" {% if notificacion and notificacion.cita.pk == cita.pk %}selected{% endif %}>
+                        {{ cita.paciente.nombre }} {{ cita.paciente.apellido }} - {{ cita.fecha|date:"d/m/Y" }} {{ cita.hora|time:"H:i" }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Selecciona la cita del paciente a notificar</p>
+            </div>
+        </div>
+
+        <!-- Sección: Canales -->
+        <div class="space-y-4 pb-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase">Canales de Notificación</h3>
+            
+            <div class="flex flex-col gap-2">
+                <label for="numero" class="text-sm font-bold text-gray-900 dark:text-white">Número de Origen <span class="text-red-500">*</span></label>
+                <select id="numero" name="numero" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" required>
+                    <option value="">Selecciona un número</option>
+                    {% for numero in numeros %}
+                    <option value="{{ numero.pk }}" {% if notificacion and notificacion.numero.pk == numero.pk %}selected{% endif %}>
+                        {{ numero.numero }} {% if numero.descripcion %}- {{ numero.descripcion }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Número de WhatsApp desde el que se enviará</p>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <label for="mensaje" class="text-sm font-bold text-gray-900 dark:text-white">Plantilla de Mensaje <span class="text-red-500">*</span></label>
+                <select id="mensaje" name="mensaje" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary" required>
+                    <option value="">Selecciona un mensaje</option>
+                    {% for msg in mensajes %}
+                    <option value="{{ msg.pk }}" {% if notificacion and notificacion.mensaje.pk == msg.pk %}selected{% endif %}>
+                        {{ msg.titulo }} ({{ msg.get_tipo_display }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Selecciona la plantilla del mensaje</p>
+            </div>
+        </div>
+
+        <!-- Sección: Programación -->
+        <div class="space-y-4 pb-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-bold text-gray-900 dark:text-white uppercase">Programación</h3>
+            
+            <div class="flex flex-col gap-2">
+                <label for="fecha_programada" class="text-sm font-bold text-gray-900 dark:text-white">Fecha y Hora <span class="text-red-500">*</span></label>
+                <input type="datetime-local" id="fecha_programada" name="fecha_programada" 
+                    value="{% if notificacion %}{{ notificacion.fecha_programada|date:'Y-m-dTH:i' }}{% endif %}"
+                    class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    required>
+                <p class="text-xs text-gray-500 dark:text-gray-400">⚠️ No se permite notificar de fechas pasadas. Hoy es {{ "now"|date:"d/m/Y" }}</p>
+            </div>
+        </div>
+
+        <!-- Vista previa del mensaje -->
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
+            <div class="flex gap-3">
+                <span class="material-symbols-outlined text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1">preview</span>
+                <div class="text-sm text-blue-700 dark:text-blue-300 space-y-2">
+                    <p><strong>Vista previa del mensaje:</strong></p>
+                    <div id="preview" class="bg-white dark:bg-gray-800 p-3 rounded border border-blue-200 dark:border-blue-700 text-gray-900 dark:text-white font-mono text-xs whitespace-pre-wrap">
+                        Selecciona un mensaje para ver la vista previa
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones -->
+        <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button type="submit" class="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">
+                <span class="material-symbols-outlined text-[20px]">{% if notificacion %}save{% else %}send{% endif %}</span>
+                {% if notificacion %}Guardar cambios{% else %}Programar notificación{% endif %}
+            </button>
+            <a href="{% url 'notificaciones_lista' %}" class="flex items-center gap-2 px-6 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+                Cancelar
+            </a>
+        </div>
+    </form>
+
+    <script>
+        // Actualizar vista previa del mensaje
+        document.getElementById('mensaje').addEventListener('change', function() {
+            const select = this;
+            const preview = document.getElementById('preview');
+            const option = select.options[select.selectedIndex];
+            
+            if (option.value) {
+                const text = option.text;
+                preview.textContent = 'Cargando contenido...';
+                
+                // En producción, hacer fetch del contenido real
+                // Por ahora mostrar el nombre
+                preview.textContent = `${text}\n\n(Contenido del mensaje completo se mostrará aquí)`;
+            } else {
+                preview.textContent = 'Selecciona un mensaje para ver la vista previa';
+            }
+        });
+
+        // Validar que la fecha no sea pasada
+        document.getElementById('fecha_programada').addEventListener('change', function() {
+            const selectedDate = new Date(this.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate < today) {
+                this.setCustomValidity('No se permite seleccionar fechas pasadas');
+                this.reportValidity();
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    </script>
+</div>
+{% endblock %}

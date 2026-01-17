@@ -4,8 +4,9 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from openpyxl import load_workbook, Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
-from .models import Paciente, Cita, NumeroNotificacion, Mensaje
+from .models import Paciente, Cita, NumeroNotificacion, Mensaje, Notificacion
 from datetime import datetime
+from django.utils import timezone
 import io
 
 
@@ -609,3 +610,235 @@ def mensaje_toggle(request, pk):
     
     return redirect('mensajes_lista')
 
+
+@login_required(login_url='login')
+def notificaciones_lista(request):
+    """Vista para listar notificaciones"""
+    notificaciones = Notificacion.objects.all()
+    
+    # Filtros
+    estado = request.GET.get('estado', '')
+    fecha_desde = request.GET.get('fecha_desde', '')
+    fecha_hasta = request.GET.get('fecha_hasta', '')
+    buscar = request.GET.get('buscar', '')
+    
+    if estado:
+        notificaciones = notificaciones.filter(estado=estado)
+    
+    if fecha_desde:
+        try:
+            fecha = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
+            notificaciones = notificaciones.filter(fecha_programada__date__gte=fecha)
+        except ValueError:
+            pass
+    
+    if fecha_hasta:
+        try:
+            fecha = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
+            notificaciones = notificaciones.filter(fecha_programada__date__lte=fecha)
+        except ValueError:
+            pass
+    
+    if buscar:
+        notificaciones = notificaciones.filter(
+            numero_destinatario__icontains=buscar
+        ) | notificaciones.filter(
+            cita__paciente__nombre__icontains=buscar
+        ) | notificaciones.filter(
+            cita__paciente__movil__icontains=buscar
+        )
+    
+    # Estadísticas
+    total = Notificacion.objects.count()
+    enviadas = Notificacion.objects.filter(estado='enviada').count()
+    pendientes = Notificacion.objects.filter(estado='pendiente').count()
+    fallidas = Notificacion.objects.filter(estado='fallida').count()
+    
+    contexto = {
+        'notificaciones': notificaciones,
+        'estados': Notificacion.ESTADO_CHOICES,
+        'total': total,
+        'enviadas': enviadas,
+        'pendientes': pendientes,
+        'fallidas': fallidas,
+    }
+    return render(request, 'home/notificaciones_lista.html', contexto)
+
+
+@login_required(login_url='login')
+def notificacion_crear(request):
+    """Vista para crear una notificación"""
+    if request.method == 'POST':
+        cita_id = request.POST.get('cita')
+        numero_id = request.POST.get('numero')
+        mensaje_id = request.POST.get('mensaje')
+        fecha_programada_str = request.POST.get('fecha_programada')
+        
+        try:
+            cita = Cita.objects.get(pk=cita_id)
+            numero = NumeroNotificacion.objects.get(pk=numero_id, activo=True)
+            mensaje = Mensaje.objects.get(pk=mensaje_id, activo=True)
+            
+            # Convertir fecha y hora
+            fecha_programada = datetime.strptime(fecha_programada_str, '%Y-%m-%dT%H:%M')
+            fecha_programada = timezone.make_aware(fecha_programada)
+            
+            # Validar que no sea fecha pasada
+            if fecha_programada.date() < timezone.now().date():
+                messages.error(request, 'No se puede programar notificaciones para fechas pasadas')
+                return redirect('notificacion_crear')
+            
+            # Crear notificación
+            notificacion = Notificacion.objects.create(
+                cita=cita,
+                numero=numero,
+                mensaje=mensaje,
+                numero_destinatario=cita.paciente.movil,
+                numero_origen=numero.numero,
+                fecha_programada=fecha_programada,
+            )
+            
+            messages.success(request, 'Notificación creada correctamente')
+            return redirect('notificaciones_lista')
+        
+        except (Cita.DoesNotExist, NumeroNotificacion.DoesNotExist, Mensaje.DoesNotExist) as e:
+            messages.error(request, 'Error: verifique que los datos seleccionados existan y estén activos')
+            return redirect('notificacion_crear')
+        except ValueError:
+            messages.error(request, 'Formato de fecha inválido')
+            return redirect('notificacion_crear')
+        except Exception as e:
+            messages.error(request, f'Error al crear notificación: {str(e)}')
+            return redirect('notificacion_crear')
+    
+    # GET - Mostrar formulario
+    citas = Cita.objects.filter(estado__in=['pendiente', 'confirmada']).order_by('fecha', 'hora')
+    numeros = NumeroNotificacion.objects.filter(activo=True)
+    mensajes = Mensaje.objects.filter(activo=True)
+    
+    contexto = {
+        'titulo': 'Crear Notificación',
+        'citas': citas,
+        'numeros': numeros,
+        'mensajes': mensajes,
+    }
+    return render(request, 'home/notificacion_form.html', contexto)
+
+
+@login_required(login_url='login')
+def notificacion_editar(request, pk):
+    """Vista para editar una notificación"""
+    notificacion = get_object_or_404(Notificacion, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Solo permitir editar si es pendiente
+            if notificacion.estado != 'pendiente':
+                messages.error(request, 'Solo se pueden editar notificaciones pendientes')
+                return redirect('notificacion_editar', pk=pk)
+            
+            numero_id = request.POST.get('numero')
+            mensaje_id = request.POST.get('mensaje')
+            fecha_programada_str = request.POST.get('fecha_programada')
+            
+            numero = NumeroNotificacion.objects.get(pk=numero_id, activo=True)
+            mensaje = Mensaje.objects.get(pk=mensaje_id, activo=True)
+            
+            # Convertir fecha
+            fecha_programada = datetime.strptime(fecha_programada_str, '%Y-%m-%dT%H:%M')
+            fecha_programada = timezone.make_aware(fecha_programada)
+            
+            # Validar que no sea fecha pasada
+            if fecha_programada.date() < timezone.now().date():
+                messages.error(request, 'No se puede programar notificaciones para fechas pasadas')
+                return redirect('notificacion_editar', pk=pk)
+            
+            # Actualizar
+            notificacion.numero = numero
+            notificacion.mensaje = mensaje
+            notificacion.numero_origen = numero.numero
+            notificacion.fecha_programada = fecha_programada
+            notificacion.save()
+            
+            messages.success(request, 'Notificación actualizada correctamente')
+            return redirect('notificaciones_lista')
+        
+        except Exception as e:
+            messages.error(request, f'Error al actualizar notificación: {str(e)}')
+            return redirect('notificacion_editar', pk=pk)
+    
+    # GET - Mostrar formulario
+    numeros = NumeroNotificacion.objects.filter(activo=True)
+    mensajes = Mensaje.objects.filter(activo=True)
+    
+    contexto = {
+        'notificacion': notificacion,
+        'titulo': 'Editar Notificación',
+        'numeros': numeros,
+        'mensajes': mensajes,
+    }
+    return render(request, 'home/notificacion_form.html', contexto)
+
+
+@login_required(login_url='login')
+def notificacion_eliminar(request, pk):
+    """Vista para eliminar una notificación"""
+    notificacion = get_object_or_404(Notificacion, pk=pk)
+    
+    if request.method == 'POST':
+        if notificacion.estado != 'pendiente':
+            messages.error(request, 'Solo se pueden eliminar notificaciones pendientes')
+            return redirect('notificaciones_lista')
+        
+        numero_dest = notificacion.numero_destinatario
+        notificacion.delete()
+        messages.success(request, f'Notificación para {numero_dest} eliminada correctamente')
+        return redirect('notificaciones_lista')
+    
+    contexto = {'notificacion': notificacion}
+    return render(request, 'home/notificacion_eliminar.html', contexto)
+
+
+@login_required(login_url='login')
+def notificacion_enviar(request, pk):
+    """Vista para enviar una notificación via WhatsApp"""
+    notificacion = get_object_or_404(Notificacion, pk=pk)
+    
+    if notificacion.estado != 'pendiente':
+        messages.error(request, f'Esta notificación ya ha sido {notificacion.get_estado_display().lower()}')
+        return redirect('notificaciones_lista')
+    
+    # Validación de fecha
+    if notificacion.fecha_programada.date() < timezone.now().date():
+        messages.error(request, 'No se puede enviar notificaciones de fechas pasadas')
+        notificacion.estado = 'fallida'
+        notificacion.mensaje_error = 'Intento de envío de notificación con fecha pasada'
+        notificacion.save()
+        return redirect('notificaciones_lista')
+    
+    try:
+        # TODO: Implementar integración con WhatsApp API
+        # Por ahora, marcar como enviada (simulación)
+        notificacion.estado = 'enviada'
+        notificacion.fecha_enviada = timezone.now()
+        notificacion.response_whatsapp = {
+            'status': 'success',
+            'message': 'Notificación enviada (simulada)',
+            'timestamp': timezone.now().isoformat()
+        }
+        notificacion.save()
+        
+        messages.success(request, f'Notificación enviada a {notificacion.numero_destinatario}')
+    except Exception as e:
+        notificacion.estado = 'fallida'
+        notificacion.mensaje_error = str(e)
+        notificacion.response_whatsapp = {
+            'status': 'error',
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        }
+        notificacion.save()
+        
+        messages.error(request, f'Error al enviar notificación: {str(e)}')
+    
+    return redirect('notificaciones_lista')
