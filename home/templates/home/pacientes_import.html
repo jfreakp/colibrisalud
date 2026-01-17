@@ -50,15 +50,15 @@
     <div class="bg-white dark:bg-background-dark rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-12 text-center group transition-all hover:border-primary/50 hover:bg-primary/5" id="dropZone">
         <form method="POST" enctype="multipart/form-data" id="uploadForm" class="flex flex-col items-center gap-4">
             {% csrf_token %}
+            <input type="file" name="archivo" accept=".xlsx,.xls,.csv" class="hidden" id="fileInput" required>
             <div class="size-16 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform" id="iconContainer">
                 <span class="material-symbols-outlined text-[32px]" id="uploadIcon">upload_file</span>
             </div>
             <div class="flex flex-col gap-1">
                 <p class="text-lg font-bold text-gray-900 dark:text-white" id="statusText">Cargar archivo Excel</p>
                 <p class="text-sm text-gray-500 dark:text-gray-400" id="statusSubtext">
-                    Arrastra el archivo aquí o <label class="text-primary font-bold cursor-pointer">
+                    Arrastra el archivo aquí o <label for="fileInput" class="text-primary font-bold cursor-pointer">
                         selecciona uno
-                        <input type="file" name="archivo" accept=".xlsx,.xls,.csv" class="hidden" id="fileInput" required>
                     </label>
                 </p>
             </div>
@@ -163,9 +163,8 @@
         // Resetear textos
         statusText.textContent = 'Cargar archivo Excel';
         statusText.classList.remove('text-green-600', 'dark:text-green-400');
-        statusSubtext.innerHTML = `Arrastra el archivo aquí o <label class="text-primary font-bold cursor-pointer">
+        statusSubtext.innerHTML = `Arrastra el archivo aquí o <label for="fileInput" class="text-primary font-bold cursor-pointer">
                         selecciona uno
-                        <input type="file" name="archivo" accept=".xlsx,.xls,.csv" class="hidden" id="fileInput" required>
                     </label>`;
         
         // Resetear botón
@@ -173,9 +172,8 @@
         submitBtn.classList.add('bg-primary', 'hover:bg-primary/90');
         submitBtn.textContent = 'Cargar';
         
-        // Necesario re-asignar el event listener al nuevo input
-        const newFileInput = document.getElementById('fileInput');
-        newFileInput.addEventListener('change', handleFileInputChange);
+        // Limpiar el input file
+        fileInput.value = '';
     }
 
     // Manejador para cuando se selecciona archivo por input
@@ -214,9 +212,17 @@
     // Event listener para click en el input file
     fileInput.addEventListener('change', handleFileInputChange);
 
-    // Hacer el área clickeable
+    // Hacer el área clickeable solo si NO hay archivo seleccionado
     dropZone.addEventListener('click', (e) => {
-        if (e.target.id !== 'fileInput') {
+        if (e.target.id !== 'fileInput' && fileInput.files.length === 0) {
+            fileInput.click();
+        }
+    });
+
+    // Prevenir que el submit abra el file picker
+    uploadForm.addEventListener('submit', (e) => {
+        if (fileInput.files.length === 0) {
+            e.preventDefault();
             fileInput.click();
         }
     });
