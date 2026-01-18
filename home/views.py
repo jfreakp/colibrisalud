@@ -276,7 +276,7 @@ def citas_import(request):
                     errores_detalles.append(f"Fila {row_idx}: {str(e)}")
             
             # Mensaje de éxito
-            mensaje = f"✓ Importación completada: {importadas} nuevas, {actualizadas} actualizadas, {errores} errores"
+            mensaje = f"✓ Importación completada: {importadas} nuevos, {actualizados} actualizados, {errores} errores"
             messages.success(request, mensaje)
             
             if errores_detalles:
@@ -613,32 +613,68 @@ def mensaje_toggle(request, pk):
 
 @login_required(login_url='login')
 def notificaciones_lista(request):
-    """Vista para listar notificaciones"""
+    """Vista para listar notificaciones y notificar a todos por día"""
+    # --- Notificar a todos por día (POST) ---
+    if request.method == 'POST' and 'notificar_dia' in request.POST:
+        fecha_str = request.POST.get('fecha')
+        mensaje_id = request.POST.get('mensaje')
+        numero_id = request.POST.get('numero')
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except Exception:
+            messages.error(request, 'Fecha inválida')
+            return redirect('notificaciones_lista')
+        if fecha < timezone.now().date():
+            messages.error(request, 'No se puede notificar citas de fechas pasadas')
+            return redirect('notificaciones_lista')
+        try:
+            mensaje = Mensaje.objects.get(pk=mensaje_id, activo=True)
+            numero = NumeroNotificacion.objects.get(pk=numero_id, activo=True)
+        except (Mensaje.DoesNotExist, NumeroNotificacion.DoesNotExist):
+            messages.error(request, 'Debe seleccionar un mensaje y un número de origen válidos')
+            return redirect('notificaciones_lista')
+        citas = Cita.objects.filter(fecha=fecha, estado='pendiente')
+        if not citas.exists():
+            messages.info(request, 'No hay citas pendientes para esa fecha')
+            return redirect('notificaciones_lista')
+        creadas = 0
+        for cita in citas:
+            existe = Notificacion.objects.filter(cita=cita, mensaje=mensaje, estado='pendiente').exists()
+            if not existe:
+                Notificacion.objects.create(
+                    cita=cita,
+                    numero=numero,
+                    mensaje=mensaje,
+                    numero_destinatario=cita.paciente.movil,
+                    numero_origen=numero.numero,
+                    fecha_programada=timezone.make_aware(datetime.combine(fecha, cita.hora)),
+                )
+                creadas += 1
+        if creadas:
+            messages.success(request, f'Se crearon {creadas} notificaciones para el {fecha.strftime("%d/%m/%Y")}')
+        else:
+            messages.info(request, 'No se crearon nuevas notificaciones (ya existen o no hay citas pendientes)')
+        return redirect('notificaciones_lista')
+    # --- Listado y filtros ---
     notificaciones = Notificacion.objects.all()
-    
-    # Filtros
     estado = request.GET.get('estado', '')
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
     buscar = request.GET.get('buscar', '')
-    
     if estado:
         notificaciones = notificaciones.filter(estado=estado)
-    
     if fecha_desde:
         try:
             fecha = datetime.strptime(fecha_desde, '%Y-%m-%d').date()
             notificaciones = notificaciones.filter(fecha_programada__date__gte=fecha)
         except ValueError:
             pass
-    
     if fecha_hasta:
         try:
             fecha = datetime.strptime(fecha_hasta, '%Y-%m-%d').date()
             notificaciones = notificaciones.filter(fecha_programada__date__lte=fecha)
         except ValueError:
             pass
-    
     if buscar:
         notificaciones = notificaciones.filter(
             numero_destinatario__icontains=buscar
@@ -647,13 +683,14 @@ def notificaciones_lista(request):
         ) | notificaciones.filter(
             cita__paciente__movil__icontains=buscar
         )
-    
-    # Estadísticas
     total = Notificacion.objects.count()
     enviadas = Notificacion.objects.filter(estado='enviada').count()
     pendientes = Notificacion.objects.filter(estado='pendiente').count()
     fallidas = Notificacion.objects.filter(estado='fallida').count()
-    
+    # Para el formulario de notificar-dia
+    hoy = timezone.now().date()
+    mensajes = Mensaje.objects.filter(activo=True)
+    numeros = NumeroNotificacion.objects.filter(activo=True)
     contexto = {
         'notificaciones': notificaciones,
         'estados': Notificacion.ESTADO_CHOICES,
@@ -661,68 +698,11 @@ def notificaciones_lista(request):
         'enviadas': enviadas,
         'pendientes': pendientes,
         'fallidas': fallidas,
+        'hoy': hoy,
+        'mensajes': mensajes,
+        'numeros': numeros,
     }
     return render(request, 'home/notificaciones_lista.html', contexto)
-
-
-@login_required(login_url='login')
-def notificacion_crear(request):
-    """Vista para crear una notificación"""
-    if request.method == 'POST':
-        cita_id = request.POST.get('cita')
-        numero_id = request.POST.get('numero')
-        mensaje_id = request.POST.get('mensaje')
-        fecha_programada_str = request.POST.get('fecha_programada')
-        
-        try:
-            cita = Cita.objects.get(pk=cita_id)
-            numero = NumeroNotificacion.objects.get(pk=numero_id, activo=True)
-            mensaje = Mensaje.objects.get(pk=mensaje_id, activo=True)
-            
-            # Convertir fecha y hora
-            fecha_programada = datetime.strptime(fecha_programada_str, '%Y-%m-%dT%H:%M')
-            fecha_programada = timezone.make_aware(fecha_programada)
-            
-            # Validar que no sea fecha pasada
-            if fecha_programada.date() < timezone.now().date():
-                messages.error(request, 'No se puede programar notificaciones para fechas pasadas')
-                return redirect('notificacion_crear')
-            
-            # Crear notificación
-            notificacion = Notificacion.objects.create(
-                cita=cita,
-                numero=numero,
-                mensaje=mensaje,
-                numero_destinatario=cita.paciente.movil,
-                numero_origen=numero.numero,
-                fecha_programada=fecha_programada,
-            )
-            
-            messages.success(request, 'Notificación creada correctamente')
-            return redirect('notificaciones_lista')
-        
-        except (Cita.DoesNotExist, NumeroNotificacion.DoesNotExist, Mensaje.DoesNotExist) as e:
-            messages.error(request, 'Error: verifique que los datos seleccionados existan y estén activos')
-            return redirect('notificacion_crear')
-        except ValueError:
-            messages.error(request, 'Formato de fecha inválido')
-            return redirect('notificacion_crear')
-        except Exception as e:
-            messages.error(request, f'Error al crear notificación: {str(e)}')
-            return redirect('notificacion_crear')
-    
-    # GET - Mostrar formulario
-    citas = Cita.objects.filter(estado__in=['pendiente', 'confirmada']).order_by('fecha', 'hora')
-    numeros = NumeroNotificacion.objects.filter(activo=True)
-    mensajes = Mensaje.objects.filter(activo=True)
-    
-    contexto = {
-        'titulo': 'Crear Notificación',
-        'citas': citas,
-        'numeros': numeros,
-        'mensajes': mensajes,
-    }
-    return render(request, 'home/notificacion_form.html', contexto)
 
 
 @login_required(login_url='login')
@@ -842,3 +822,63 @@ def notificacion_enviar(request, pk):
         messages.error(request, f'Error al enviar notificación: {str(e)}')
     
     return redirect('notificaciones_lista')
+
+
+@login_required(login_url='login')
+def notificar_citas_dia(request):
+    """
+    Vista para notificar a todos los pacientes con citas pendientes de un día específico.
+    Permite seleccionar fecha, mensaje y número de origen.
+    """
+    if request.method == 'POST':
+        fecha_str = request.POST.get('fecha')
+        mensaje_id = request.POST.get('mensaje')
+        numero_id = request.POST.get('numero')
+        try:
+            fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+        except Exception:
+            messages.error(request, 'Fecha inválida')
+            return redirect('notificar_citas_dia')
+        if fecha < timezone.now().date():
+            messages.error(request, 'No se puede notificar citas de fechas pasadas')
+            return redirect('notificar_citas_dia')
+        try:
+            mensaje = Mensaje.objects.get(pk=mensaje_id, activo=True)
+            numero = NumeroNotificacion.objects.get(pk=numero_id, activo=True)
+        except (Mensaje.DoesNotExist, NumeroNotificacion.DoesNotExist):
+            messages.error(request, 'Debe seleccionar un mensaje y un número de origen válidos')
+            return redirect('notificar_citas_dia')
+        citas = Cita.objects.filter(fecha=fecha, estado='pendiente')
+        if not citas.exists():
+            messages.info(request, 'No hay citas pendientes para esa fecha')
+            return redirect('notificar_citas_dia')
+        creadas = 0
+        for cita in citas:
+            # Evitar duplicados: solo crear si no existe notificación pendiente para esa cita y mensaje
+            existe = Notificacion.objects.filter(cita=cita, mensaje=mensaje, estado='pendiente').exists()
+            if not existe:
+                Notificacion.objects.create(
+                    cita=cita,
+                    numero=numero,
+                    mensaje=mensaje,
+                    numero_destinatario=cita.paciente.movil,
+                    numero_origen=numero.numero,
+                    fecha_programada=timezone.make_aware(datetime.combine(fecha, cita.hora)),
+                )
+                creadas += 1
+        if creadas:
+            messages.success(request, f'Se crearon {creadas} notificaciones para el {fecha.strftime("%d/%m/%Y")}')
+        else:
+            messages.info(request, 'No se crearon nuevas notificaciones (ya existen o no hay citas pendientes)')
+        return redirect('notificaciones_lista')
+    # GET: mostrar formulario
+    hoy = timezone.now().date()
+    mensajes = Mensaje.objects.filter(activo=True)
+    numeros = NumeroNotificacion.objects.filter(activo=True)
+    contexto = {
+        'titulo': 'Notificar a todos los pacientes de un día',
+        'hoy': hoy,
+        'mensajes': mensajes,
+        'numeros': numeros,
+    }
+    return render(request, 'home/notificar_citas_dia.html', contexto)
