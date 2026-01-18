@@ -1,0 +1,49 @@
+{% extends 'home/base_admin.html' %}
+{% block title %}{{ titulo }} - Colibri Salud{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto space-y-8">
+    <h2 class="text-3xl font-black text-[#111817] dark:text-white tracking-tight">{{ titulo }}</h2>
+    <form method="post" class="bg-white dark:bg-[#1f3533] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-8 space-y-6">
+        {% csrf_token %}
+        <div class="flex flex-col gap-2">
+            <label for="nombre" class="font-bold text-gray-900 dark:text-white">Nombre <span class="text-red-500">*</span></label>
+            <input type="text" id="nombre" name="nombre" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" required value="{{ area.nombre|default:'' }}">
+        </div>
+        <div class="flex flex-col gap-2">
+            <label for="telefono" class="font-bold text-gray-900 dark:text-white">Teléfono</label>
+            <input type="text" id="telefono" name="telefono" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" value="{{ area.telefono|default:'' }}">
+            <p class="text-xs text-gray-500">Teléfono principal del área</p>
+        </div>
+        <div class="flex flex-col gap-2">
+            <label for="icono" class="font-bold text-gray-900 dark:text-white">Icono (Material Symbols)</label>
+            <input type="text" id="icono" name="icono" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" value="{{ area.icono|default:'' }}">
+            <p class="text-xs text-gray-500">Ejemplo: medical_services, emergency, event_available</p>
+        </div>
+        <div class="flex flex-col gap-2">
+            <label for="color" class="font-bold text-gray-900 dark:text-white">Color (Tailwind)</label>
+            <input type="text" id="color" name="color" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm" value="{{ area.color|default:'' }}">
+            <p class="text-xs text-gray-500">Ejemplo: bg-primary/20, bg-orange-100, bg-blue-100</p>
+        </div>
+        <div class="flex flex-col gap-2">
+            <label for="descripcion" class="font-bold text-gray-900 dark:text-white">Descripción</label>
+            <textarea id="descripcion" name="descripcion" rows="2" class="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm">{{ area.descripcion|default:'' }}</textarea>
+        </div>
+        {% if area %}
+        <div class="flex items-center gap-2">
+            <input type="checkbox" id="activo" name="activo" {% if area.activo %}checked{% endif %}>
+            <label for="activo" class="text-sm text-gray-700 dark:text-gray-300">Área activa</label>
+        </div>
+        {% endif %}
+        <div class="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <button type="submit" class="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">
+                <span class="material-symbols-outlined text-[20px]">save</span>
+                Guardar
+            </button>
+            <a href="{% url 'areas_lista' %}" class="flex items-center gap-2 px-6 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+                Cancelar
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

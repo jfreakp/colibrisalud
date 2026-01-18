@@ -1,0 +1,53 @@
+{% extends 'home/base_admin.html' %}
+{% block title %}Áreas - Colibri Salud{% endblock %}
+{% block content %}
+<div class="space-y-8">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="max-w-2xl">
+            <h2 class="text-4xl font-black text-[#111817] dark:text-white tracking-tight">Áreas</h2>
+            <p class="text-gray-500 dark:text-gray-400 mt-2 text-lg">Gestiona las áreas o etiquetas para los números de notificación.</p>
+        </div>
+        <a href="{% url 'area_crear' %}" class="bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-xl flex items-center gap-2 shadow-lg shadow-primary/20 transition-all active:scale-95 shrink-0">
+            <span class="material-symbols-outlined">add</span>
+            Nueva área
+        </a>
+    </div>
+    <div class="bg-white dark:bg-[#1f3533] rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                    <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Nombre</th>
+                    <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Icono</th>
+                    <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Color</th>
+                    <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500">Descripción</th>
+                    <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500 text-center">Estado</th>
+                    <th class="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500 text-right">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                {% for area in areas %}
+                <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                    <td class="px-6 py-5 font-bold text-[#111817] dark:text-white">{{ area.nombre }}</td>
+                    <td class="px-6 py-5">{% if area.icono %}<span class="material-symbols-outlined">{{ area.icono }}</span>{% endif %}</td>
+                    <td class="px-6 py-5">{% if area.color %}<span class="inline-block w-6 h-6 rounded-full" style="background: none;" :class="'{{ area.color }}'"></span> {{ area.color }}{% endif %}</td>
+                    <td class="px-6 py-5 text-sm text-gray-500">{{ area.descripcion }}</td>
+                    <td class="px-6 py-5 text-center">
+                        {% if area.activo %}
+                        <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold">Activo</span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1.5 py-1 px-3 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-5 text-right">
+                        <a href="{% url 'area_editar' area.pk %}" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-primary transition-colors"><span class="material-symbols-outlined text-lg">edit</span></a>
+                        <a href="{% url 'area_eliminar' area.pk %}" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-red-500 transition-colors"><span class="material-symbols-outlined text-lg">delete</span></a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="px-6 py-5 text-center text-gray-400">No hay áreas registradas.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,3 +1,57 @@
+from .models import Area
+# CRUD de Áreas
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+
+@login_required(login_url='login')
+def areas_lista(request):
+    areas = Area.objects.all()
+    return render(request, 'home/areas_lista.html', {'areas': areas})
+
+@login_required(login_url='login')
+def area_crear(request):
+    if request.method == 'POST':
+        nombre = request.POST.get('nombre', '').strip()
+        telefono = request.POST.get('telefono', '').strip()
+        icono = request.POST.get('icono', '').strip()
+        color = request.POST.get('color', '').strip()
+        descripcion = request.POST.get('descripcion', '').strip()
+        if not nombre:
+            messages.error(request, 'El nombre es obligatorio')
+            return redirect('area_crear')
+        if Area.objects.filter(nombre=nombre).exists():
+            messages.error(request, 'Ya existe un área con ese nombre')
+            return redirect('area_crear')
+        Area.objects.create(nombre=nombre, telefono=telefono, icono=icono, color=color, descripcion=descripcion)
+        messages.success(request, 'Área creada correctamente')
+        return redirect('areas_lista')
+    return render(request, 'home/area_form.html', {'titulo': 'Crear Área'})
+
+@login_required(login_url='login')
+def area_editar(request, pk):
+    area = get_object_or_404(Area, pk=pk)
+    if request.method == 'POST':
+        area.nombre = request.POST.get('nombre', '').strip()
+        area.telefono = request.POST.get('telefono', '').strip()
+        area.icono = request.POST.get('icono', '').strip()
+        area.color = request.POST.get('color', '').strip()
+        area.descripcion = request.POST.get('descripcion', '').strip()
+        area.activo = request.POST.get('activo') == 'on'
+        area.save()
+        messages.success(request, 'Área actualizada correctamente')
+        return redirect('areas_lista')
+    return render(request, 'home/area_form.html', {'area': area, 'titulo': 'Editar Área'})
+
+@login_required(login_url='login')
+def area_eliminar(request, pk):
+    area = get_object_or_404(Area, pk=pk)
+    if request.method == 'POST':
+        nombre = area.nombre
+        area.delete()
+        messages.success(request, f'Área "{nombre}" eliminada correctamente')
+        return redirect('areas_lista')
+    return render(request, 'home/area_eliminar.html', {'area': area})
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -12,7 +66,24 @@ import io
 
 @login_required(login_url='login')
 def dashboard(request):
-    return render(request, 'home/dashboard.html')
+    today = timezone.now().date()
+    pacientes_activos = Paciente.objects.filter(activo=True).count()
+    citas_hoy = Cita.objects.filter(fecha=today).count()
+    citas_pendientes = Cita.objects.filter(estado='pendiente').count()
+    notificaciones_hoy = Notificacion.objects.filter(fecha_programada__date=today).count()
+    notificaciones_enviadas_hoy = Notificacion.objects.filter(fecha_programada__date=today, estado='enviada').count()
+    notificaciones_pendientes_hoy = Notificacion.objects.filter(fecha_programada__date=today, estado='pendiente').count()
+    areas = Area.objects.all()
+    contexto = {
+        'pacientes_activos': pacientes_activos,
+        'citas_hoy': citas_hoy,
+        'citas_pendientes': citas_pendientes,
+        'notificaciones_hoy': notificaciones_hoy,
+        'notificaciones_enviadas_hoy': notificaciones_enviadas_hoy,
+        'notificaciones_pendientes_hoy': notificaciones_pendientes_hoy,
+        'areas': areas,
+    }
+    return render(request, 'home/dashboard.html', contexto)
 
 
 @login_required(login_url='login')
@@ -276,7 +347,7 @@ def citas_import(request):
                     errores_detalles.append(f"Fila {row_idx}: {str(e)}")
             
             # Mensaje de éxito
-            mensaje = f"✓ Importación completada: {importadas} nuevos, {actualizados} actualizados, {errores} errores"
+            mensaje = f"✓ Importación completada: {importadas} nuevos, {actualizadas} actualizados, {errores} errores"
             messages.success(request, mensaje)
             
             if errores_detalles:

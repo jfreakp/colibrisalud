@@ -1,6 +1,24 @@
+
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+
+class Area(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    telefono = models.CharField(max_length=20, blank=True, help_text="Teléfono principal del área")
+    icono = models.CharField(max_length=50, blank=True, help_text="Nombre del icono Material Symbols")
+    color = models.CharField(max_length=20, blank=True, help_text="Clase de color Tailwind, ej: bg-primary/20")
+    descripcion = models.CharField(max_length=200, blank=True)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['nombre']
+        verbose_name_plural = 'Áreas'
+
+    def __str__(self):
+        return self.nombre
 
 
 class Paciente(models.Model):
@@ -45,17 +63,17 @@ class Cita(models.Model):
 
 
 class NumeroNotificacion(models.Model):
+    area = models.ForeignKey('Area', on_delete=models.SET_NULL, null=True, blank=True, related_name='numeros')
     numero = models.CharField(max_length=20, unique=True)
     descripcion = models.CharField(max_length=100, blank=True, help_text="Ej: WhatsApp principal, SMS emergencias, etc.")
     activo = models.BooleanField(default=True)
-    
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         ordering = ['-fecha_creacion']
         verbose_name_plural = 'Números de Notificación'
-    
+
     def __str__(self):
         desc = f" - {self.descripcion}" if self.descripcion else ""
         return f"{self.numero}{desc}"
