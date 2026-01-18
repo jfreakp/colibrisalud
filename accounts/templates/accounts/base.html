@@ -5,109 +5,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Colibri Salud{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Symbols+Outlined" rel="stylesheet">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 100%);
             min-height: 100vh;
+            margin: 0;
             display: flex;
             flex-direction: column;
         }
-        nav {
-            background-color: rgba(0,0,0,0.8);
-            padding: 15px 30px;
-            color: white;
+        .auth-container {
+            max-width: 420px;
+            margin: 48px auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 6px 32px 0 rgba(0,0,0,0.08);
+            padding: 40px 32px 32px 32px;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 24px;
+        }
+        .auth-header {
+            display: flex;
+            flex-direction: column;
             align-items: center;
+            gap: 8px;
         }
-        nav a { color: white; text-decoration: none; margin-left: 20px; }
-        nav a:hover { text-decoration: underline; }
-        .container {
-            max-width: 500px;
-            margin: 50px auto;
-            background: white;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        .auth-header h1 {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #1e293b;
+            margin: 0;
         }
-        h1, h2 { color: #333; margin-bottom: 30px; text-align: center; }
+        .auth-header p {
+            color: #64748b;
+            font-size: 1rem;
+            margin: 0;
+        }
+        .messages {
+            list-style: none;
+            margin: 0 0 16px 0;
+            padding: 0;
+        }
+        .messages li {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 0.98rem;
+        }
+        .messages .success { background-color: #e0f7e9; color: #15803d; border: 1px solid #bbf7d0; }
+        .messages .error { background-color: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
         .form-group {
-            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
-        label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        label {
+            font-weight: 700;
+            color: #334155;
+            font-size: 0.98rem;
+        }
         input[type="text"], input[type="email"], input[type="password"], textarea {
             width: 100%;
             padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 7px;
+            font-size: 1rem;
+            background: #f8fafc;
+            transition: border 0.2s;
         }
         input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus, textarea:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 5px rgba(102, 126, 234, 0.1);
+            border-color: #6366f1;
+            background: #fff;
         }
         button {
             width: 100%;
             padding: 12px;
-            background-color: #667eea;
+            background: linear-gradient(90deg, #6366f1 0%, #0ea5e9 100%);
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 500;
+            border-radius: 7px;
+            font-size: 1.1rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px 0 rgba(99,102,241,0.08);
         }
-        button:hover { background-color: #764ba2; }
-        .link-container { text-align: center; margin-top: 20px; }
-        .link-container a { color: #667eea; text-decoration: none; }
-        .link-container a:hover { text-decoration: underline; }
-        .messages {
-            list-style: none;
-            margin-bottom: 20px;
+        button:hover {
+            background: linear-gradient(90deg, #4f46e5 0%, #0369a1 100%);
         }
-        .messages li {
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 10px;
+        .link-container {
+            text-align: center;
+            margin-top: 18px;
         }
-        .messages .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .messages .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        .helptext {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
+        .link-container a {
+            color: #6366f1;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.98rem;
         }
-        ul { margin-left: 20px; }
+        .link-container a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .auth-container {
+                padding: 24px 8px;
+            }
+        }
     </style>
 </head>
 <body>
-    <nav>
-        <div><strong>🏥 Colibri Salud</strong></div>
-        <div>
-            {% if user.is_authenticated %}
-                <span>Hola, {{ user.first_name|default:user.email }}</span>
-                <a href="{% url 'logout' %}">Cerrar sesión</a>
-            {% else %}
-                <a href="{% url 'login' %}">Iniciar sesión</a>
-                <a href="{% url 'registro' %}">Registrarse</a>
-            {% endif %}
+    <div class="auth-container">
+        <div class="auth-header">
+            <span class="material-symbols-outlined" style="font-size: 2.5rem; color: #6366f1;">local_hospital</span>
+            <h1>Colibri Salud</h1>
+            <p>Bienvenido, por favor ingresa tus datos</p>
         </div>
-    </nav>
-
-    {% if messages %}
-        <div class="container" style="margin-top: 20px;">
+        {% if messages %}
             <ul class="messages">
                 {% for message in messages %}
-                    <li class="{% if message.tags %}{{ message.tags }}{% endif %}">{{ message }}</li>
+                    <li class="{{ message.tags }}">{{ message }}</li>
                 {% endfor %}
             </ul>
-        </div>
-    {% endif %}
-
-    {% block content %}{% endblock %}
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
 </body>
 </html>

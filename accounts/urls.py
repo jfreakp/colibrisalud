@@ -9,4 +9,5 @@ urlpatterns = [
     path('recuperar/enviado/', views.RecuperarContraseña.as_view(), name='password_reset_done'),
     path('recuperar/<uidb64>/<token>/', views.RecuperarContraseñaConfirm.as_view(), name='password_reset_confirm'),
     path('recuperar/completo/', views.RecuperarContraseñaComplete.as_view(), name='password_reset_complete'),
+    path('activar/<uidb64>/<token>/', views.ActivarCuentaView.as_view(), name='activar_cuenta'),
 ]
