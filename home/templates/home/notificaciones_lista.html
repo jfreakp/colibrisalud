@@ -147,6 +147,9 @@
                             <a href="{% url 'notificacion_eliminar' notif.pk %}" class="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors" title="Eliminar">
                                 <span class="material-symbols-outlined text-red-600 dark:text-red-400">delete</span>
                             </a>
+                            <a href="https://wa.me/{{ notif.numero_destinatario|urlencode }}?text={{ notif.mensaje.contenido|urlencode }}" target="_blank" class="p-2 hover:bg-green-100 dark:hover:bg-green-900/20 rounded transition-colors" title="Enviar por WhatsApp">
+                                <span class="material-symbols-outlined text-green-600 dark:text-green-400">chat</span>
+                            </a>
                             {% else %}
                             <button disabled class="p-2 text-gray-300 dark:text-gray-600 cursor-not-allowed" title="No disponible">
                                 <span class="material-symbols-outlined">lock</span>
